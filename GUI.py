@@ -4,6 +4,7 @@ import subprocess
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import threading
+import platform
 
 # Global variables to store ping results
 times = []
@@ -22,7 +23,11 @@ def scan_network():
     def ping():
         try:
             for i in range(1, 5):
-                result = subprocess.run(["ping", "-c", "1", target], capture_output=True, text=True)
+                if platform.system().lower() == "windows":
+                    result = subprocess.run(["ping", "-n", "1", target], capture_output=True, text=True)
+                else:
+                    result = subprocess.run(["ping", "-c", "1", target], capture_output=True, text=True)
+                
                 output_text.insert(tk.END, result.stdout + "\n")
                 if "time=" in result.stdout:
                     time_ms = float(result.stdout.split("time=")[1].split(" ")[0])
