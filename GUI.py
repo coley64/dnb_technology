@@ -2,6 +2,12 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext
 import subprocess
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+import threading
+
+# Global variables to store ping results
+times = []
+packets = []
 
 def scan_network():
     target = target_entry.get()
@@ -10,22 +16,39 @@ def scan_network():
         return
     
     output_text.insert(tk.END, f"Scanning {target}...\n")
-    try:
-        result = subprocess.run(["ping", "-c", "4", target], capture_output=True, text=True)
-        output_text.insert(tk.END, result.stdout + "\n")
-    except Exception as e:
-        output_text.insert(tk.END, f"Error: {e}\n")
+    times.clear()
+    packets.clear()
+    
+    def ping():
+        try:
+            for i in range(1, 5):
+                result = subprocess.run(["ping", "-c", "1", target], capture_output=True, text=True)
+                output_text.insert(tk.END, result.stdout + "\n")
+                if "time=" in result.stdout:
+                    time_ms = float(result.stdout.split("time=")[1].split(" ")[0])
+                    times.append(time_ms)
+                    packets.append(i)
+                else:
+                    times.append(0)
+                    packets.append(i)
+        except Exception as e:
+            output_text.insert(tk.END, f"Error: {e}\n")
+    
+    threading.Thread(target=ping).start()
+
+def update_graph(frame):
+    if packets:
+        ax.clear()
+        ax.plot(packets, times, marker='o', linestyle='-')
+        ax.set_xlabel("Packet Number")
+        ax.set_ylabel("Response Time (ms)")
+        ax.set_title("Ping Response Times")
+        ax.grid()
 
 def show_graph():
-    times = [10, 20, 15, 25]  # Example data (in milliseconds)
-    packets = [1, 2, 3, 4]
-    
-    plt.figure(figsize=(6,4))
-    plt.plot(packets, times, marker='o', linestyle='-')
-    plt.xlabel("Packet Number")
-    plt.ylabel("Response Time (ms)")
-    plt.title("Ping Response Times")
-    plt.grid()
+    global fig, ax
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ani = FuncAnimation(fig, update_graph, interval=1000)
     plt.show()
 
 # Initialize main window
